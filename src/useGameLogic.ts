@@ -16,6 +16,7 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
   const nextObstacleRef = useRef<number>(80)
   const nextCloudRef = useRef<number>(CLOUD_INTERVAL)
   const dinoImgRef = useRef<HTMLImageElement | null>(null)
+  const cactusImgRef = useRef<HTMLImageElement | null>(null)
   const isLoadedRef = useRef<boolean>(false)
 
   const getCanvas = () => canvasRef.current!
@@ -87,8 +88,8 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
     drawBackground(ctx, W, H)
     drawGround(ctx, W, s.groundY, s.frame, s.speed)
 
-    if (!isLoadedRef.current || !dinoImgRef.current) {
-      // Don't start game tick until image is loaded
+    if (!isLoadedRef.current || !dinoImgRef.current || !cactusImgRef.current) {
+      // Don't start game tick until all images are loaded
       rafRef.current = requestAnimationFrame(tick)
       return
     }
@@ -98,6 +99,20 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
       s.blinkTimer++
       if (s.blinkTimer > 30) { s.blinkVisible = !s.blinkVisible; s.blinkTimer = 0 }
       drawTitle(ctx, W, H, s.blinkVisible)
+      rafRef.current = requestAnimationFrame(tick)
+      return
+    }
+
+    if (s.status === 'over') {
+      drawClouds(ctx, s.clouds, s.groundY)
+      s.obstacles.forEach(o => drawCactus(ctx, o, cactusImgRef.current))
+      drawDino(ctx, s.dino.x, s.dino.y, s.dino.frame, s.dino.ducking, true, dinoImgRef.current)
+      drawScore(ctx, s.score, s.hiScore, W)
+      
+      s.blinkTimer++
+      if (s.blinkTimer > 30) { s.blinkVisible = !s.blinkVisible; s.blinkTimer = 0 }
+      drawGameOver(ctx, W, H, s.blinkVisible)
+      
       rafRef.current = requestAnimationFrame(tick)
       return
     }
@@ -168,18 +183,12 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
 
     // ── Draw ─────────────────────────────────────────────────────
     drawClouds(ctx, s.clouds, s.groundY)
-    s.obstacles.forEach(o => drawCactus(ctx, o))
+    s.obstacles.forEach(o => drawCactus(ctx, o, cactusImgRef.current))
     drawDino(ctx, dino.x, dino.y, dino.frame, dino.ducking, s.status === 'over', dinoImgRef.current)
 
     // HUD
     drawScore(ctx, s.score, s.hiScore, W)
     drawMilestoneFlash(ctx, s.score, s.frame, W, H)
-
-    if (s.status === 'over') {
-      s.blinkTimer++
-      if (s.blinkTimer > 30) { s.blinkVisible = !s.blinkVisible; s.blinkTimer = 0 }
-      drawGameOver(ctx, W, H, s.blinkVisible)
-    }
 
     rafRef.current = requestAnimationFrame(tick)
   }, [])
@@ -188,14 +197,33 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
   useEffect(() => {
     const canvas = canvasRef.current!
 
-    // Load Sprite Image
+    // Load Sprite Images
+    let loadedCount = 0
+    const checkLoaded = () => {
+      loadedCount++
+      if (loadedCount === 2) isLoadedRef.current = true
+    }
+
     if (!dinoImgRef.current) {
       const img = new Image()
       img.src = '/assets/dino_sprites/dino_1.png'
       img.onload = () => {
         dinoImgRef.current = img
-        isLoadedRef.current = true
+        checkLoaded()
       }
+    } else {
+      checkLoaded()
+    }
+
+    if (!cactusImgRef.current) {
+      const img = new Image()
+      img.src = '/assets/cactus.webp'
+      img.onload = () => {
+        cactusImgRef.current = img
+        checkLoaded()
+      }
+    } else {
+      checkLoaded()
     }
 
     const resize = () => {

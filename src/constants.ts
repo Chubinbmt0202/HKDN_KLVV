@@ -1,9 +1,9 @@
 export const GRAVITY = 0.6
 export const JUMP_FORCE = -13
 export const DINO_W = 44
-export const DINO_H = 48
+export const DINO_H = 44
 export const DUCK_H = 28
-export const GROUND_OFFSET = 20
+export const GROUND_OFFSET = 30
 export const INITIAL_SPEED = 5
 export const SPEED_INCREMENT = 0.0008
 export const OBSTACLE_INTERVAL_MIN = 60

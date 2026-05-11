@@ -1,41 +1,31 @@
 import type { Obstacle } from './type'
 
-export function drawCactus(ctx: CanvasRenderingContext2D, obs: Obstacle) {
-  const s = 2
-  ctx.fillStyle = '#535353'
-
-  const drawSingleCactus = (cx: number, cy: number, tall: boolean) => {
-    const h = tall ? 14 : 10
-    // stem
-    for (let i = 0; i < h; i++) {
-      ctx.fillRect(cx + 2 * s, cy + i * s, s * 2, s)
-    }
-    // top
-    ctx.fillRect(cx + s, cy, s * 4, s)
-    // arms
-    if (tall) {
-      ctx.fillRect(cx, cy + 4 * s, s * 2, s)
-      ctx.fillRect(cx, cy + 3 * s, s, s * 3)
-      ctx.fillRect(cx + 4 * s, cy + 3 * s, s * 2, s)
-      ctx.fillRect(cx + 5 * s, cy + 2 * s, s, s * 3)
-    } else {
-      ctx.fillRect(cx, cy + 3 * s, s * 2, s)
-      ctx.fillRect(cx, cy + 2 * s, s, s * 3)
-      ctx.fillRect(cx + 4 * s, cy + 2 * s, s * 2, s)
-      ctx.fillRect(cx + 5 * s, cy + s, s, s * 3)
-    }
+export function drawCactus(ctx: CanvasRenderingContext2D, obs: Obstacle, cactusImg: HTMLImageElement | null) {
+  if (!cactusImg) {
+    // Fallback if image not loaded yet
+    ctx.fillStyle = '#535353'
+    ctx.fillRect(obs.x, obs.y, obs.w, obs.h)
+    return
   }
 
+  // Draw the cactus image scaling it to fit the obstacle dimensions
+  // The original cactus.webp is just one cactus. 
+  // We can just draw it stretching or repeating depending on the obstacle type.
+
   if (obs.type === 'cactus_group') {
-    drawSingleCactus(obs.x, obs.y, false)
-    drawSingleCactus(obs.x + 14, obs.y - 6, true)
-    drawSingleCactus(obs.x + 28, obs.y, false)
+    // draw 3 cactuses
+    ctx.drawImage(cactusImg, obs.x, obs.y + 20, 14, 40)
+    ctx.drawImage(cactusImg, obs.x + 20, obs.y + 8, 16, 56)
+    ctx.drawImage(cactusImg, obs.x + 38, obs.y + 20, 14, 40)
   } else if (obs.type === 'cactus_l') {
-    drawSingleCactus(obs.x, obs.y, true)
-    drawSingleCactus(obs.x + 16, obs.y, true)
+    // draw 2 tall cactuses
+    ctx.drawImage(cactusImg, obs.x, obs.y + 8, 18, 56)
+    ctx.drawImage(cactusImg, obs.x + 18, obs.y + 8, 18, 56)
   } else if (obs.type === 'cactus_m') {
-    drawSingleCactus(obs.x, obs.y, true)
+    // draw 1 medium cactus
+    ctx.drawImage(cactusImg, obs.x, obs.y + 8, 18, 52)
   } else {
-    drawSingleCactus(obs.x, obs.y, false)
+    // draw 1 small cactus
+    ctx.drawImage(cactusImg, obs.x, obs.y + 8, 14, 40)
   }
 }
