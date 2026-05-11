@@ -9,11 +9,15 @@ export function drawScore(ctx: CanvasRenderingContext2D, score: number, hiScore:
 
 export function drawTitle(ctx: CanvasRenderingContext2D, W: number, H: number, blinkVisible: boolean) {
   ctx.fillStyle = '#535353'
-  ctx.font = 'bold 20px monospace'
   ctx.textAlign = 'center'
-  ctx.fillText('DINO GAME', W / 2, H / 2 - 40)
+
+  // Chữ DINO GAME to hơn
+  ctx.font = 'bold 32px monospace'
+  ctx.fillText('DINO GAME', W / 2, H / 2 - 50)
+
+  // Dòng hướng dẫn nhấp nháy
   ctx.font = '14px monospace'
-  if (blinkVisible) ctx.fillText('TAP / SPACE ĐỂ BẮT ĐẦU', W / 2, H / 2 - 10)
+  if (blinkVisible) ctx.fillText('TAP / SPACE ĐỂ BẮT ĐẦU', W / 2, H / 2 + 10)
 }
 
 export function drawGameOver(ctx: CanvasRenderingContext2D, W: number, H: number, blinkVisible: boolean) {

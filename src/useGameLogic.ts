@@ -10,7 +10,11 @@ import { drawCactus } from './Obstacle'
 import { drawBackground, drawGround, drawClouds } from './Background'
 import { drawScore, drawTitle, drawGameOver, drawMilestoneFlash } from './Score'
 
-export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
+export function useGameLogic(
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  isShopOpen: boolean = false,
+  selectedDino: number = 1
+) {
   const stateRef = useRef<GameState | null>(null)
   const rafRef = useRef<number>(0)
   const nextObstacleRef = useRef<number>(80)
@@ -50,6 +54,7 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
   }, [])
 
   const jump = useCallback(() => {
+    if (isShopOpen) return
     const s = stateRef.current
     if (!s) return
     if (s.status === 'idle') {
@@ -67,13 +72,14 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
       s.dino.vy = JUMP_FORCE
       s.dino.jumping = true
     }
-  }, [initState])
+  }, [initState, isShopOpen])
 
   const duck = useCallback((active: boolean) => {
+    if (isShopOpen) return
     const s = stateRef.current
     if (!s || s.status !== 'playing') return
     s.dino.ducking = active && !s.dino.jumping
-  }, [])
+  }, [isShopOpen])
 
   // ── Game loop ──────────────────────────────────────────────────
   const tick = useCallback(() => {
@@ -206,7 +212,7 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
 
     if (!dinoImgRef.current) {
       const img = new Image()
-      img.src = '/assets/dino_sprites/dino_1.png'
+      img.src = `/assets/dino_sprites/dino_${selectedDino}.png`
       img.onload = () => {
         dinoImgRef.current = img
         checkLoaded()
@@ -264,5 +270,16 @@ export function useGameLogic(canvasRef: React.RefObject<HTMLCanvasElement | null
       canvas.removeEventListener('touchstart', onTouch)
       canvas.removeEventListener('mousedown', jump)
     }
-  }, [initState, jump, duck, tick, canvasRef])
+  }, [initState, jump, duck, tick]) // Restored dependencies
+
+  // Effect to handle character changes
+  useEffect(() => {
+    if (!isLoadedRef.current) return // Skip if initial load hasn't finished
+    
+    const img = new Image()
+    img.src = `/assets/dino_sprites/dino_${selectedDino}.png`
+    img.onload = () => {
+      dinoImgRef.current = img
+    }
+  }, [selectedDino])
 }
