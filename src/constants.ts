@@ -13,3 +13,11 @@ export const CLOUD_INTERVAL = 200
 // Sprite dimensions (original pixel art was 24x24)
 export const SPRITE_W = 24
 export const SPRITE_H = 24
+
+// Giá vàng để mua các mẫu khủng long
+export const DINO_PRICES: Record<number, number> = {
+  1: 0,    // Mặc định miễn phí
+  2: 200,
+  3: 500,
+  4: 1000
+}

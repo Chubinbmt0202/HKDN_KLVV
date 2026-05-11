@@ -1,42 +1,74 @@
 import React from 'react';
+import { DINO_PRICES } from './constants';
 
 interface ShopProps {
   selected: number;
   onSelect: (id: number) => void;
+  onBuy: (id: number, price: number) => boolean;
   onClose: () => void;
+  gold: number;
+  ownedDinos: number[];
 }
 
-export function Shop({ selected, onSelect, onClose }: ShopProps) {
+export function Shop({ selected, onSelect, onBuy, onClose, gold, ownedDinos }: ShopProps) {
   const dinos = [1, 2, 3, 4];
+
+  const handleCardClick = (id: number) => {
+    const isOwned = ownedDinos.includes(id);
+    if (isOwned) {
+      onSelect(id);
+    } else {
+      const price = DINO_PRICES[id];
+      if (gold >= price) {
+        onBuy(id, price);
+      }
+    }
+  };
 
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
         <h2 style={styles.title}>CỬA HÀNG KHỦNG LONG</h2>
+        <div style={styles.goldDisplay}>🪙 Vàng hiện có: {gold}</div>
 
         <div style={styles.grid}>
-          {dinos.map(id => (
-            <div
-              key={id}
-              style={{
-                ...styles.card,
-                borderColor: selected === id ? '#4CAF50' : '#ddd',
-                backgroundColor: selected === id ? '#f0fff0' : '#fff'
-              }}
-              onClick={() => onSelect(id)}
-            >
-              <div style={styles.imageContainer}>
-                {/* We use object-position to show the idle frame from the sprite sheet */}
-                <img
-                  src={`/assets/dino_sprites/dino_${id}.png`}
-                  alt={`Dino ${id}`}
-                  style={styles.sprite}
-                />
+          {dinos.map(id => {
+            const isOwned = ownedDinos.includes(id);
+            const isSelected = selected === id;
+            const price = DINO_PRICES[id];
+            const canAfford = gold >= price;
+
+            return (
+              <div
+                key={id}
+                style={{
+                  ...styles.card,
+                  borderColor: isSelected ? '#4CAF50' : isOwned ? '#535353' : '#ddd',
+                  backgroundColor: isSelected ? '#f0fff0' : isOwned ? '#f9f9f9' : '#fff',
+                  opacity: !isOwned && !canAfford ? 0.7 : 1
+                }}
+                onClick={() => handleCardClick(id)}
+              >
+                <div style={styles.imageContainer}>
+                  <img
+                    src={`/assets/dino_sprites/dino_${id}.png`}
+                    alt={`Dino ${id}`}
+                    style={styles.sprite}
+                  />
+                </div>
+                <div style={styles.dinoName}>Mẫu {id}</div>
+
+                {!isOwned && (
+                  <div style={styles.priceTag}>
+                    🪙 {price}
+                  </div>
+                )}
+
+                {isSelected && <div style={styles.selectedBadge}>Đang chọn</div>}
+                {isOwned && !isSelected && <div style={styles.ownedBadge}>Đã có</div>}
               </div>
-              <div style={styles.dinoName}>Mẫu {id}</div>
-              {selected === id && <div style={styles.selectedBadge}>Đã chọn</div>}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <button style={styles.closeButton} onClick={onClose}>
@@ -72,10 +104,21 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   title: {
-    margin: '0 0 15px 0',
+    margin: '0 0 5px 0',
     fontFamily: 'monospace',
     fontSize: '18px', // Chữ tiêu đề nhỏ hơn
     color: '#333',
+  },
+  goldDisplay: {
+    fontFamily: 'monospace',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#D4AF37',
+    marginBottom: '15px',
+    backgroundColor: '#fffbe6',
+    padding: '4px 12px',
+    borderRadius: '12px',
+    border: '1px solid #ffe58f'
   },
   grid: {
     display: 'grid',
@@ -116,6 +159,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     color: '#535353',
   },
+  priceTag: {
+    fontFamily: 'monospace',
+    fontSize: '9px',
+    color: '#D4AF37',
+    marginTop: '4px',
+    fontWeight: 'bold',
+  },
   selectedBadge: {
     position: 'absolute',
     top: '-8px',
@@ -127,6 +177,20 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '8px',
     fontFamily: 'monospace',
     fontWeight: 'bold',
+    zIndex: 1,
+  },
+  ownedBadge: {
+    position: 'absolute',
+    top: '-8px',
+    right: '-8px',
+    backgroundColor: '#535353',
+    color: 'white',
+    padding: '1px 4px',
+    borderRadius: '8px',
+    fontSize: '8px',
+    fontFamily: 'monospace',
+    fontWeight: 'bold',
+    zIndex: 1,
   },
   closeButton: {
     padding: '6px 20px',

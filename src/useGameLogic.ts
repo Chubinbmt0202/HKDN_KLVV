@@ -13,7 +13,8 @@ import { drawScore, drawTitle, drawGameOver, drawMilestoneFlash } from './Score'
 export function useGameLogic(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   isShopOpen: boolean = false,
-  selectedDino: number = 1
+  selectedDino: number = 1,
+  setGold?: (val: number | ((prev: number) => number)) => void
 ) {
   const stateRef = useRef<GameState | null>(null)
   const rafRef = useRef<number>(0)
@@ -183,6 +184,16 @@ export function useGameLogic(
     for (const obs of s.obstacles) {
       if (checkCollision(dino, obs)) {
         s.status = 'over'
+        
+        // Cấp vàng dựa trên điểm số (hiển thị là s.score / 5)
+        const earnedGold = Math.floor(s.score / 5)
+        if (earnedGold > 0 && setGold) {
+          setGold(prev => {
+            const newTotal = prev + earnedGold
+            localStorage.setItem('dinoGold', String(newTotal))
+            return newTotal
+          })
+        }
         break
       }
     }

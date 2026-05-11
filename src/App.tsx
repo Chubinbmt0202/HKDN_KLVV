@@ -6,9 +6,34 @@ import { Shop } from './Shop'
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isShopOpen, setIsShopOpen] = useState(false)
-  const [selectedDino, setSelectedDino] = useState(1)
+  const [selectedDino, setSelectedDino] = useState(() => parseInt(localStorage.getItem('selectedDino') || '1'))
+  const [gold, setGold] = useState(() => parseInt(localStorage.getItem('dinoGold') || '0'))
+  const [ownedDinos, setOwnedDinos] = useState<number[]>(() => {
+    const saved = localStorage.getItem('dinoOwned')
+    return saved ? JSON.parse(saved) : [1] // Mặc định luôn có mẫu 1
+  })
 
-  useGameLogic(canvasRef, isShopOpen, selectedDino)
+  const handleBuy = (id: number, price: number) => {
+    if (gold >= price) {
+      const newGold = gold - price
+      const newOwned = [...ownedDinos, id]
+      
+      setGold(newGold)
+      setOwnedDinos(newOwned)
+      
+      localStorage.setItem('dinoGold', String(newGold))
+      localStorage.setItem('dinoOwned', JSON.stringify(newOwned))
+      return true
+    }
+    return false
+  }
+
+  const handleSelect = (id: number) => {
+    setSelectedDino(id)
+    localStorage.setItem('selectedDino', String(id))
+  }
+
+  useGameLogic(canvasRef, isShopOpen, selectedDino, setGold)
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -42,8 +67,11 @@ export default function App() {
       {isShopOpen && (
         <Shop
           selected={selectedDino}
-          onSelect={setSelectedDino}
+          onSelect={handleSelect}
+          onBuy={handleBuy}
           onClose={() => setIsShopOpen(false)}
+          gold={gold}
+          ownedDinos={ownedDinos}
         />
       )}
     </div>

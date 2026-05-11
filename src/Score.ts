@@ -3,7 +3,7 @@ export function drawScore(ctx: CanvasRenderingContext2D, score: number, hiScore:
   ctx.font = 'bold 16px monospace'
   ctx.textAlign = 'right'
   const scoreStr = String(Math.floor(score / 5)).padStart(5, '0')
-  const hiStr = 'HI ' + String(Math.floor(hiScore / 5)).padStart(5, '0')
+  const hiStr = 'Điểm cao nhất ' + String(Math.floor(hiScore / 5)).padStart(5, '0')
   ctx.fillText(hiStr + '  ' + scoreStr, W - 16, 30)
 }
 
