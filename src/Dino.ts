@@ -1,4 +1,4 @@
-import type { Dino, Obstacle, Rect } from './type'
+import type { Dino, Rect } from './type'
 import { DUCK_H, SPRITE_W, SPRITE_H } from './constants'
 
 // Sprite frame indices (assuming standard chrome dino sprite sheet layout)
@@ -21,7 +21,7 @@ export function drawDino(
   dinoImg: HTMLImageElement | null
 ) {
   const s = 2 // scale multiplier
-  
+
   if (!dinoImg) {
     // Fallback if image not loaded yet
     ctx.fillStyle = '#535353'
@@ -46,10 +46,10 @@ export function drawDino(
 
   // Jumping uses idle frame
   if (!ducking && !isDead && (spriteFrame === FRAMES.run1 || spriteFrame === FRAMES.run2)) {
-      // In the air, frame doesn't toggle in useGameLogic (jumping=true stops timer), 
-      // but standard is idle frame.
-      // We will let useGameLogic's `jumping` state or `vy !== 0` handle it, but wait: 
-      // drawDino doesn't know if jumping. Let's just pass `spriteFrame` based on what frame is.
+    // In the air, frame doesn't toggle in useGameLogic (jumping=true stops timer), 
+    // but standard is idle frame.
+    // We will let useGameLogic's `jumping` state or `vy !== 0` handle it, but wait: 
+    // drawDino doesn't know if jumping. Let's just pass `spriteFrame` based on what frame is.
   }
 
   // Draw the specific frame from the sprite sheet
@@ -57,16 +57,16 @@ export function drawDino(
   const sy = 0
   const sw = SPRITE_W
   const sh = SPRITE_H
-  
+
   // Dest coordinates and dimensions
   // Normal dimensions are DINO_W (44), DINO_H (48). Since sprite is 24x24, 
   // scaled by 2 is 48x48.
   const dw = SPRITE_W * s
   const dh = SPRITE_H * s
-  
+
   // For ducking, the sprite usually is wider and shorter in some sheets, 
   // but if it's uniformly 24x24, we just draw it.
-  
+
   ctx.drawImage(dinoImg, sx, sy, sw, sh, x, y, dw, dh)
 }
 
@@ -74,8 +74,8 @@ export function checkCollision(dino: Dino, obs: Rect): boolean {
   const margin = 8
   const dh = dino.ducking ? DUCK_H : dino.h
   // Also adjust width for collision if ducking, typically wider, but we use dino.w for now
-  const dw = dino.ducking ? 59 : dino.w 
-  
+  const dw = dino.ducking ? 59 : dino.w
+
   return (
     dino.x + margin < obs.x + obs.w - margin &&
     dino.x + dw - margin > obs.x + margin &&
