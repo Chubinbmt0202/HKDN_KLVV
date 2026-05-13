@@ -9,6 +9,8 @@ import { drawDino, checkCollision } from './Dino'
 import { drawCactus } from './Obstacle'
 import { drawBackground, drawGround, drawClouds } from './Background'
 import { drawScore, drawTitle, drawGameOver, drawMilestoneFlash } from './Score'
+import { playJumpSound, playCrashSound } from './audio'
+
 
 export function useGameLogic(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -72,6 +74,7 @@ export function useGameLogic(
     if (s.status === 'playing' && !s.dino.jumping && !s.dino.ducking) {
       s.dino.vy = JUMP_FORCE
       s.dino.jumping = true
+      playJumpSound()
     }
   }, [initState, isShopOpen])
 
@@ -184,6 +187,7 @@ export function useGameLogic(
     for (const obs of s.obstacles) {
       if (checkCollision(dino, obs)) {
         s.status = 'over'
+        playCrashSound()
         
         // Cấp vàng dựa trên điểm số (hiển thị là s.score / 5)
         const earnedGold = Math.floor(s.score / 5)
