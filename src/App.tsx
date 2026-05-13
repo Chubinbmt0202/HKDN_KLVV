@@ -12,28 +12,43 @@ export default function App() {
     const saved = localStorage.getItem('dinoOwned')
     return saved ? JSON.parse(saved) : [1] // Mặc định luôn có mẫu 1
   })
+  const [selectedBg, setSelectedBg] = useState(() => parseInt(localStorage.getItem('selectedBg') || '1'))
+  const [ownedBgs, setOwnedBgs] = useState<number[]>(() => {
+    const saved = localStorage.getItem('bgOwned')
+    return saved ? JSON.parse(saved) : [1]
+  })
 
-  const handleBuy = (id: number, price: number) => {
+  const handleBuy = (type: 'dino' | 'bg', id: number, price: number) => {
     if (gold >= price) {
       const newGold = gold - price
-      const newOwned = [...ownedDinos, id]
-      
       setGold(newGold)
-      setOwnedDinos(newOwned)
-      
       localStorage.setItem('dinoGold', String(newGold))
-      localStorage.setItem('dinoOwned', JSON.stringify(newOwned))
+      
+      if (type === 'dino') {
+        const newOwned = [...ownedDinos, id]
+        setOwnedDinos(newOwned)
+        localStorage.setItem('dinoOwned', JSON.stringify(newOwned))
+      } else {
+        const newOwned = [...ownedBgs, id]
+        setOwnedBgs(newOwned)
+        localStorage.setItem('bgOwned', JSON.stringify(newOwned))
+      }
       return true
     }
     return false
   }
 
-  const handleSelect = (id: number) => {
-    setSelectedDino(id)
-    localStorage.setItem('selectedDino', String(id))
+  const handleSelect = (type: 'dino' | 'bg', id: number) => {
+    if (type === 'dino') {
+      setSelectedDino(id)
+      localStorage.setItem('selectedDino', String(id))
+    } else {
+      setSelectedBg(id)
+      localStorage.setItem('selectedBg', String(id))
+    }
   }
 
-  useGameLogic(canvasRef, isShopOpen, selectedDino, setGold)
+  useGameLogic(canvasRef, isShopOpen, selectedDino, selectedBg, setGold)
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -66,12 +81,14 @@ export default function App() {
 
       {isShopOpen && (
         <Shop
-          selected={selectedDino}
+          selectedDino={selectedDino}
+          selectedBg={selectedBg}
           onSelect={handleSelect}
           onBuy={handleBuy}
           onClose={() => setIsShopOpen(false)}
           gold={gold}
           ownedDinos={ownedDinos}
+          ownedBgs={ownedBgs}
         />
       )}
     </div>

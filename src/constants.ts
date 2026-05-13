@@ -21,3 +21,13 @@ export const DINO_PRICES: Record<number, number> = {
   3: 500,
   4: 1000
 }
+
+// Giá vàng để mua các hình nền
+export const BG_PRICES: Record<number, number> = {
+  1: 0,    // Mặc định miễn phí (Day)
+  2: 300,  // Night
+  3: 600,  // Sunset
+  4: 1000  // Mars
+}
+
+export const POWERUP_DURATION = 600 // 10 seconds at 60fps

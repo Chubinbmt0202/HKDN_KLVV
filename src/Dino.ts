@@ -1,4 +1,4 @@
-import type { Dino, Obstacle } from './type'
+import type { Dino, Obstacle, Rect } from './type'
 import { DUCK_H, SPRITE_W, SPRITE_H } from './constants'
 
 // Sprite frame indices (assuming standard chrome dino sprite sheet layout)
@@ -70,7 +70,7 @@ export function drawDino(
   ctx.drawImage(dinoImg, sx, sy, sw, sh, x, y, dw, dh)
 }
 
-export function checkCollision(dino: Dino, obs: Obstacle): boolean {
+export function checkCollision(dino: Dino, obs: Rect): boolean {
   const margin = 8
   const dh = dino.ducking ? DUCK_H : dino.h
   // Also adjust width for collision if ducking, typically wider, but we use dino.w for now

@@ -4,9 +4,15 @@ import type { Cloud } from './type'
 export function drawBackground(
     ctx: CanvasRenderingContext2D,
     W: number,
-    H: number
+    H: number,
+    selectedBg: number = 1
 ) {
-    ctx.fillStyle = '#f7f7f7'
+    if (selectedBg === 1) ctx.fillStyle = '#f7f7f7'
+    else if (selectedBg === 2) ctx.fillStyle = '#1e1e24'
+    else if (selectedBg === 3) ctx.fillStyle = '#ffdac1'
+    else if (selectedBg === 4) ctx.fillStyle = '#e09f87'
+    else ctx.fillStyle = '#f7f7f7'
+    
     ctx.fillRect(0, 0, W, H)
 }
 

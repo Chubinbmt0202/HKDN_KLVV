@@ -6,7 +6,7 @@ import {
   OBSTACLE_INTERVAL_MAX, CLOUD_INTERVAL
 } from './constants'
 import { drawDino, checkCollision } from './Dino'
-import { drawCactus } from './Obstacle'
+import { drawObstacle } from './Obstacle'
 import { drawBackground, drawGround, drawClouds } from './Background'
 import { drawScore, drawTitle, drawGameOver, drawMilestoneFlash } from './Score'
 import { playJumpSound, playCrashSound } from './audio'
@@ -16,6 +16,7 @@ export function useGameLogic(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   isShopOpen: boolean = false,
   selectedDino: number = 1,
+  selectedBg: number = 1,
   setGold?: (val: number | ((prev: number) => number)) => void
 ) {
   const stateRef = useRef<GameState | null>(null)
@@ -25,6 +26,12 @@ export function useGameLogic(
   const dinoImgRef = useRef<HTMLImageElement | null>(null)
   const cactusImgRef = useRef<HTMLImageElement | null>(null)
   const isLoadedRef = useRef<boolean>(false)
+  const lastTimeRef = useRef<number>(0)
+  const propsRef = useRef({ isShopOpen, selectedBg })
+  
+  useEffect(() => {
+    propsRef.current = { isShopOpen, selectedBg }
+  }, [isShopOpen, selectedBg])
 
   const getCanvas = () => canvasRef.current!
 
@@ -53,6 +60,13 @@ export function useGameLogic(
       groundY,
       blinkTimer: 0,
       blinkVisible: true,
+      particles: [],
+      shakeTimer: 0,
+      coins: [],
+      powerUps: [],
+      shieldActive: false,
+      shieldTimer: 0,
+      magnetTimer: 0,
     }
   }, [])
 
@@ -86,7 +100,18 @@ export function useGameLogic(
   }, [isShopOpen])
 
   // ── Game loop ──────────────────────────────────────────────────
-  const tick = useCallback(() => {
+  const tick = useCallback((time: number) => {
+    if (time - lastTimeRef.current < 16) {
+      rafRef.current = requestAnimationFrame(tick)
+      return
+    }
+    lastTimeRef.current = time
+
+    if (propsRef.current.isShopOpen) {
+      rafRef.current = requestAnimationFrame(tick)
+      return
+    }
+
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
@@ -94,12 +119,31 @@ export function useGameLogic(
     const H = canvas.height
     const s = stateRef.current!
 
+    // Update particles
+    for (let i = s.particles.length - 1; i >= 0; i--) {
+      const p = s.particles[i]
+      p.x += p.vx - s.speed * 0.5 // moves left slightly with the world
+      p.y += p.vy
+      p.life--
+      p.size *= 0.95
+      if (p.life <= 0) s.particles.splice(i, 1)
+    }
+
+    if (s.shakeTimer > 0) s.shakeTimer--
+
+    ctx.save()
+    if (s.shakeTimer > 0) {
+      const intensity = 6
+      ctx.translate((Math.random() - 0.5) * intensity, (Math.random() - 0.5) * intensity)
+    }
+
     // draw environment
-    drawBackground(ctx, W, H)
+    drawBackground(ctx, W, H, propsRef.current.selectedBg)
     drawGround(ctx, W, s.groundY, s.frame, s.speed)
 
     if (!isLoadedRef.current || !dinoImgRef.current || !cactusImgRef.current) {
       // Don't start game tick until all images are loaded
+      ctx.restore()
       rafRef.current = requestAnimationFrame(tick)
       return
     }
@@ -108,21 +152,33 @@ export function useGameLogic(
       drawDino(ctx, s.dino.x, s.dino.y, 0, false, false, dinoImgRef.current)
       s.blinkTimer++
       if (s.blinkTimer > 30) { s.blinkVisible = !s.blinkVisible; s.blinkTimer = 0 }
-      drawTitle(ctx, W, H, s.blinkVisible)
+      drawTitle(ctx, W, H, s.blinkVisible, propsRef.current.selectedBg)
+      ctx.restore()
       rafRef.current = requestAnimationFrame(tick)
       return
     }
 
     if (s.status === 'over') {
       drawClouds(ctx, s.clouds, s.groundY)
-      s.obstacles.forEach(o => drawCactus(ctx, o, cactusImgRef.current))
+      s.obstacles.forEach(o => drawObstacle(ctx, o, cactusImgRef.current, s.frame))
       drawDino(ctx, s.dino.x, s.dino.y, s.dino.frame, s.dino.ducking, true, dinoImgRef.current)
-      drawScore(ctx, s.score, s.hiScore, W)
+      drawScore(ctx, s.score, s.hiScore, W, propsRef.current.selectedBg)
       
       s.blinkTimer++
       if (s.blinkTimer > 30) { s.blinkVisible = !s.blinkVisible; s.blinkTimer = 0 }
-      drawGameOver(ctx, W, H, s.blinkVisible)
+      drawGameOver(ctx, W, H, s.blinkVisible, propsRef.current.selectedBg)
+
+      // draw particles even when game over
+      s.particles.forEach(p => {
+        ctx.fillStyle = p.color
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife)
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+        ctx.fill()
+      })
+      ctx.globalAlpha = 1.0
       
+      ctx.restore()
       rafRef.current = requestAnimationFrame(tick)
       return
     }
@@ -139,6 +195,21 @@ export function useGameLogic(
     }
     const floorY = s.groundY - (dino.ducking ? DUCK_H : DINO_H)
     if (dino.y >= floorY) {
+      if (dino.vy > 0 && s.status === 'playing') {
+        // Spawn dust when landing
+        for (let i = 0; i < 6; i++) {
+          s.particles.push({
+            x: dino.x + 10 + Math.random() * 20,
+            y: floorY + (dino.ducking ? DUCK_H : DINO_H) - 5,
+            vx: (Math.random() - 0.5) * 3,
+            vy: -Math.random() * 2,
+            life: 15 + Math.random() * 15,
+            maxLife: 30,
+            size: 2 + Math.random() * 4,
+            color: '#b0b0b0'
+          })
+        }
+      }
       dino.y = floorY
       dino.vy = 0
       dino.jumping = false
@@ -161,18 +232,80 @@ export function useGameLogic(
     nextObstacleRef.current--
     if (nextObstacleRef.current <= 0) {
       const types: Obstacle['type'][] = ['cactus_s', 'cactus_m', 'cactus_l', 'cactus_group']
+      if (s.score > 300) {
+        types.push('bird', 'bird') // Increased chance for bird after score 300
+      }
       const type = types[Math.floor(Math.random() * types.length)]
-      const w = type === 'cactus_group' ? 44 : type === 'cactus_l' ? 36 : type === 'cactus_m' ? 18 : 14
-      const h = type === 'cactus_l' ? 56 : type === 'cactus_group' ? 56 : type === 'cactus_m' ? 52 : 40
-      s.obstacles.push({ x: W + 20, y: s.groundY - h, w, h, type })
+      
+      let w = 14, h = 40, y = s.groundY - 40;
+      if (type === 'cactus_group') { w = 44; h = 56; y = s.groundY - h; }
+      else if (type === 'cactus_l') { w = 36; h = 56; y = s.groundY - h; }
+      else if (type === 'cactus_m') { w = 18; h = 52; y = s.groundY - h; }
+      else if (type === 'bird') { 
+        w = 42; h = 30; 
+        const heights = [30, 60, 80]; // Low, Mid, High
+        y = s.groundY - heights[Math.floor(Math.random() * heights.length)];
+      }
+      else { w = 14; h = 40; y = s.groundY - h; } // cactus_s
+
+      s.obstacles.push({ x: W + 20, y, w, h, type })
       nextObstacleRef.current = Math.floor(
         OBSTACLE_INTERVAL_MIN + Math.random() * (OBSTACLE_INTERVAL_MAX - OBSTACLE_INTERVAL_MIN)
       )
+
+      // Randomly spawn coins when spawning obstacle
+      if (Math.random() > 0.4) {
+        const coinCount = 3 + Math.floor(Math.random() * 3)
+        const startX = W + 100
+        const isArc = Math.random() > 0.5
+        for (let i = 0; i < coinCount; i++) {
+          const cy = isArc 
+            ? s.groundY - 80 - Math.sin((i / (coinCount-1)) * Math.PI) * 60
+            : s.groundY - 60
+          s.coins.push({ x: startX + i * 35, y: cy, w: 20, h: 20, collected: false })
+        }
+      }
+
+      // Randomly spawn powerup (rare)
+      if (Math.random() > 0.85) {
+        const type = Math.random() > 0.5 ? 'shield' : 'magnet'
+        s.powerUps.push({ x: W + 300, y: s.groundY - 80, w: 30, h: 30, type, collected: false })
+      }
     }
 
     // move & cull obstacles
     s.obstacles = s.obstacles.filter(o => o.x + o.w > -10)
     s.obstacles.forEach(o => { o.x -= s.speed })
+
+    // move & cull coins
+    s.coins = s.coins.filter(c => c.x + c.w > -10 && !c.collected)
+    s.coins.forEach(c => {
+      if (s.magnetTimer > 0) {
+        // Attract to dino
+        const dx = (s.dino.x + 20) - c.x
+        const dy = (s.dino.y + 20) - c.y
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist < 300) {
+          c.x += (dx / dist) * 12
+          c.y += (dy / dist) * 12
+        } else {
+          c.x -= s.speed
+        }
+      } else {
+        c.x -= s.speed
+      }
+    })
+
+    // move & cull powerups
+    s.powerUps = s.powerUps.filter(p => p.x + p.w > -10 && !p.collected)
+    s.powerUps.forEach(p => { p.x -= s.speed })
+
+    // Timers
+    if (s.shieldTimer > 0) {
+      s.shieldTimer--
+      if (s.shieldTimer === 0) s.shieldActive = false
+    }
+    if (s.magnetTimer > 0) s.magnetTimer--
 
     // clouds
     nextCloudRef.current--
@@ -183,10 +316,29 @@ export function useGameLogic(
     s.clouds = s.clouds.filter(c => c.x + c.w > -20)
     s.clouds.forEach(c => { c.x -= s.speed * 0.3 })
 
-    // collision
-    for (const obs of s.obstacles) {
+    // collision with obstacles
+    for (let i = s.obstacles.length - 1; i >= 0; i--) {
+      const obs = s.obstacles[i]
       if (checkCollision(dino, obs)) {
+        if (s.shieldActive) {
+          // Shield breaks, destroy obstacle
+          s.shieldActive = false
+          s.shieldTimer = 0
+          s.obstacles.splice(i, 1)
+          s.shakeTimer = 10
+          // Spawn some particles for effect
+          for (let j = 0; j < 10; j++) {
+            s.particles.push({
+              x: obs.x + obs.w/2, y: obs.y + obs.h/2,
+              vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+              life: 20, maxLife: 20, size: 4, color: '#00BFFF'
+            })
+          }
+          continue
+        }
+
         s.status = 'over'
+        s.shakeTimer = 20
         playCrashSound()
         
         // Cấp vàng dựa trên điểm số (hiển thị là s.score / 5)
@@ -202,15 +354,82 @@ export function useGameLogic(
       }
     }
 
+    // collection - coins
+    s.coins.forEach(c => {
+      if (!c.collected && checkCollision(dino, c)) {
+        c.collected = true
+        if (setGold) setGold(prev => prev + 1)
+        // coin particle
+        for (let j = 0; j < 5; j++) {
+          s.particles.push({
+            x: c.x + 10, y: c.y + 10,
+            vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5,
+            life: 15, maxLife: 15, size: 3, color: '#FFD700'
+          })
+        }
+      }
+    })
+
+    // collection - powerups
+    s.powerUps.forEach(p => {
+      if (!p.collected && checkCollision(dino, p)) {
+        p.collected = true
+        if (p.type === 'shield') {
+          s.shieldActive = true
+          s.shieldTimer = 600 // 10s
+        } else if (p.type === 'magnet') {
+          s.magnetTimer = 600 // 10s
+        }
+      }
+    })
+
     // ── Draw ─────────────────────────────────────────────────────
     drawClouds(ctx, s.clouds, s.groundY)
-    s.obstacles.forEach(o => drawCactus(ctx, o, cactusImgRef.current))
+    s.coins.forEach(c => {
+      ctx.fillStyle = '#FFD700'
+      ctx.beginPath()
+      ctx.arc(c.x + 10, c.y + 10, 8, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = '#B8860B'
+      ctx.stroke()
+    })
+    s.powerUps.forEach(p => {
+      ctx.fillStyle = p.type === 'shield' ? '#00BFFF' : '#FF00FF'
+      ctx.fillRect(p.x, p.y, p.w, p.h)
+      ctx.strokeStyle = '#fff'
+      ctx.strokeRect(p.x, p.y, p.w, p.h)
+      ctx.fillStyle = '#fff'
+      ctx.font = 'bold 12px Arial'
+      ctx.fillText(p.type === 'shield' ? 'S' : 'M', p.x + 15, p.y + 20)
+    })
+    s.obstacles.forEach(o => drawObstacle(ctx, o, cactusImgRef.current, s.frame))
+    
+    // Shield aura
+    if (s.shieldActive) {
+      ctx.beginPath()
+      ctx.arc(dino.x + 22, dino.y + 22, 35, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(0, 191, 255, ${0.3 + Math.sin(s.frame * 0.2) * 0.2})`
+      ctx.lineWidth = 4
+      ctx.stroke()
+    }
+    
     drawDino(ctx, dino.x, dino.y, dino.frame, dino.ducking, s.status === 'over', dinoImgRef.current)
 
     // HUD
-    drawScore(ctx, s.score, s.hiScore, W)
-    drawMilestoneFlash(ctx, s.score, s.frame, W, H)
+    drawScore(ctx, s.score, s.hiScore, W, propsRef.current.selectedBg)
+    drawMilestoneFlash(ctx, s.score, s.frame, W, H, propsRef.current.selectedBg)
 
+    // draw particles
+    s.particles.forEach(p => {
+      ctx.fillStyle = p.color
+      ctx.globalAlpha = Math.max(0, p.life / p.maxLife)
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+      ctx.fill()
+    })
+    ctx.globalAlpha = 1.0
+
+    ctx.restore()
     rafRef.current = requestAnimationFrame(tick)
   }, [])
 
