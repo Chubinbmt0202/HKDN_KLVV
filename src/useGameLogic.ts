@@ -260,8 +260,8 @@ export function useGameLogic(
         const isArc = Math.random() > 0.5
         for (let i = 0; i < coinCount; i++) {
           const cy = isArc 
-            ? s.groundY - 80 - Math.sin((i / (coinCount-1)) * Math.PI) * 60
-            : s.groundY - 60
+            ? s.groundY - 44 - Math.sin((i / (coinCount-1)) * Math.PI) * 40
+            : s.groundY - 44
           s.coins.push({ x: startX + i * 35, y: cy, w: 20, h: 20, collected: false })
         }
       }
@@ -269,7 +269,7 @@ export function useGameLogic(
       // Randomly spawn powerup (rare)
       if (Math.random() > 0.85) {
         const type = Math.random() > 0.5 ? 'shield' : 'magnet'
-        s.powerUps.push({ x: W + 300, y: s.groundY - 80, w: 30, h: 30, type, collected: false })
+        s.powerUps.push({ x: W + 300, y: s.groundY - 60, w: 30, h: 30, type, collected: false })
       }
     }
 
@@ -340,16 +340,6 @@ export function useGameLogic(
         s.status = 'over'
         s.shakeTimer = 20
         playCrashSound()
-        
-        // Cấp vàng dựa trên điểm số (hiển thị là s.score / 5)
-        const earnedGold = Math.floor(s.score / 5)
-        if (earnedGold > 0 && setGold) {
-          setGold(prev => {
-            const newTotal = prev + earnedGold
-            localStorage.setItem('dinoGold', String(newTotal))
-            return newTotal
-          })
-        }
         break
       }
     }

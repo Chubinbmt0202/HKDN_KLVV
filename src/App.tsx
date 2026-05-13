@@ -1,5 +1,5 @@
 import './App.css'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useGameLogic } from './useGameLogic'
 import { Shop } from './Shop'
 
@@ -17,6 +17,10 @@ export default function App() {
     const saved = localStorage.getItem('bgOwned')
     return saved ? JSON.parse(saved) : [1]
   })
+
+  useEffect(() => {
+    localStorage.setItem('dinoGold', String(gold))
+  }, [gold])
 
   const handleBuy = (type: 'dino' | 'bg', id: number, price: number) => {
     if (gold >= price) {
